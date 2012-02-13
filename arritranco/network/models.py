@@ -5,7 +5,7 @@ Created on 13/05/2011
 '''
 from django.db import models
 from location.models import Building
-from hardware.models import Rackable, NetworkedDevice, NetworkPort
+from hardware.models import RackPlace, NetworkedDevice, NetworkPort
 from django.utils.translation import ugettext_lazy as _
 from hardware.managementutils import sftpGet 
 
@@ -79,7 +79,7 @@ class ManagementInfo(models.Model):
     def __unicode__(self):
         return u'%s' % self.name  
 
-class Switch(Rackable, NetworkedDevice):
+class Switch(RackPlace, NetworkedDevice):
     name = models.CharField(max_length=255)
     slug = models.SlugField()
     ports = models.PositiveIntegerField()
