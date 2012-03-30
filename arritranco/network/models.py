@@ -3,11 +3,15 @@ Created on 13/05/2011
 
 @author: Agustin
 '''
+import IPy
 from django.db import models
 from location.models import Building
 from hardware.models import RackPlace, NetworkedDevice, NetworkPort
 from django.utils.translation import ugettext_lazy as _
+from django.core.exceptions import ValidationError
 from hardware.managementutils import sftpGet 
+
+from customfields import IpField
 
 SWITCH_LEVEL = (
     (10, _(u'Access')),
@@ -56,6 +60,39 @@ SWITCH_LEVEL_BACKUP_INFO = {
 #    oid = models.CharField(max_length = 255,
 #            help_text = _(u'The string returned by this kind of hw when snmp queried about model')
 #            )
+
+def ip_to_int(ip):
+    """ Uses IPy to convert string ip to integer """
+    return IPy.IP(ip).ip
+
+def int_to_ip(num_ip):
+    """ Uses IPy to convert integer ip to string """
+    return IPy.IP(num_ip).strNormal()
+
+def clean_netip(value):
+        try:
+            ip = IPy.IP(value)
+        except ValueError:
+            raise ValidationError,  _(u'You must provide a valid NETWORK IP address e.g.: 10.119.70.0/32')
+        if value[-3] != '/':
+            raise ValidationError, _(u'You must use CIDR notation  \'xxx.xxx.xxx.xxx/xx\'')
+
+
+class Network(models.Model):
+    """ Represents a network of the organization. """
+    ip = models.CharField(help_text=_(u'Network ip address in CIDR notation e.g.: 10.119.70.0/24'), max_length = 18, validators=[clean_netip])
+     
+    def __unicode__(self):
+        return u'Red %s' % self.ip
+    def netmask(self):
+        return IPy.IP(self.ip).netmask().strNormal()
+    def first_ip(self):
+        """ Returns frist network host-ip """
+        return IPy.IP(self.ip)[-2].strNormal()
+    def last_ip(self):
+        """ Returns last network host-ip """
+        return IPy.IP(self.ip)[1].strNormal()
+           
 
 class ManagementInfo(models.Model):
     name = models.CharField(max_length = 255, help_text = _(u'Descriptive name of the management info (I.e. "Procurve switch, basic credentials"'))
