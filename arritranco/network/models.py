@@ -9,9 +9,8 @@ from location.models import Building
 from hardware.models import RackPlace, NetworkedDevice, NetworkPort
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
+from django.core.urlresolvers import reverse
 from hardware.managementutils import sftpGet 
-
-from customfields import IpField
 
 SWITCH_LEVEL = (
     (10, _(u'Access')),
@@ -70,28 +69,60 @@ def int_to_ip(num_ip):
     return IPy.IP(num_ip).strNormal()
 
 def clean_netip(value):
-        try:
-            ip = IPy.IP(value)
-        except ValueError:
-            raise ValidationError,  _(u'You must provide a valid NETWORK IP address e.g.: 10.119.70.0/32')
-        if value[-3] != '/':
-            raise ValidationError, _(u'You must use CIDR notation  \'xxx.xxx.xxx.xxx/xx\'')
+    """ Control the string format and that the valule provided is valid IP addr using IPy module """
+    try:
+        ip = IPy.IP(value)
+    except ValueError:
+        raise ValidationError,  _(u'You must provide a valid NETWORK IP address e.g.: 10.119.70.0/32')
+    if not ('/' in value):
+        raise ValidationError, _(u'You must use CIDR notation  \'xxx.xxx.xxx.xxx/xx\'')
 
 
 class Network(models.Model):
     """ Represents a network of the organization. """
-    ip = models.CharField(help_text=_(u'Network ip address in CIDR notation e.g.: 10.119.70.0/24'), max_length = 18, validators=[clean_netip])
+    desc = models.CharField(help_text = _(u'Short description of the network context'), max_length = 30)
+    ip = models.CharField(help_text = _(u'Network ip address in CIDR notation e.g.: 10.119.70.0/24'), max_length = 18, validators = [clean_netip])
+    first_ip = models.IPAddressField(help_text = _(u'First Host IP on network range'), editable = False)
+    last_ip =  models.IPAddressField(help_text = _(u'Last Host IP on network range'), editable = False)
+    first_ip_int = models.IPAddressField(help_text = _(u'First Host IP on network range'), editable = False)
+    last_ip_int =  models.IPAddressField(help_text = _(u'Last Host IP on network range'), editable = False)
+    size = models.IntegerField(help_text = _(u'Number of Hosts in this network'), editable = False)
      
     def __unicode__(self):
-        return u'Red %s' % self.ip
+        return u'Red %s (%s) - [%d Hosts]' % (self.ip, self.desc, self.size)
+    
+    def get_admin_url(self):
+        return reverse('admin:network_network_change',args=(self.id,))
+
+    def save(self, *args, **kwargs):
+        """ Saving values we need to find network for a host. """
+        self.last_ip = self._last_ip()
+        self.first_ip = self._first_ip()
+        self.last_ip_int = self._last_ip_int()
+        self.first_ip_int = self._first_ip_int()
+        self.size = IPy.IP(self.ip).len() - 2
+        super(Network,self).save(*args,**kwargs)
+
     def netmask(self):
+        """ Return str netmask for the network """
         return IPy.IP(self.ip).netmask().strNormal()
-    def first_ip(self):
-        """ Returns frist network host-ip """
-        return IPy.IP(self.ip)[-2].strNormal()
-    def last_ip(self):
-        """ Returns last network host-ip """
+
+    def _first_ip(self):
+        """ Returns str frist network host-ip """
         return IPy.IP(self.ip)[1].strNormal()
+
+    def _last_ip(self):
+        """ Returns str last network host-ip """
+        return IPy.IP(self.ip)[-2].strNormal()
+
+    def _first_ip_int(self):
+        """ Returns integer frist network host-ip """
+        return IPy.IP(self.ip)[1].int()
+
+    def _last_ip_int(self):
+        """ Returns integer last network host-ip """
+        return IPy.IP(self.ip)[-2].int()
+
            
 
 class ManagementInfo(models.Model):
