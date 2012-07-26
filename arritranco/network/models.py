@@ -80,7 +80,7 @@ def clean_netip(value):
 
 class Network(models.Model):
     """ Represents a network of the organization. """
-    desc = models.CharField(help_text = _(u'Short description of the network context'), max_length = 30)
+    desc = models.CharField(help_text = _(u'Short description of the network context'), max_length = 230)
     ip = models.CharField(help_text = _(u'Network ip address in CIDR notation e.g.: 10.119.70.0/24'), max_length = 18, validators = [clean_netip])
     first_ip = models.IPAddressField(help_text = _(u'First Host IP on network range'), editable = False)
     last_ip =  models.IPAddressField(help_text = _(u'Last Host IP on network range'), editable = False)
