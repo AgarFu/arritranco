@@ -123,7 +123,6 @@ class Network(models.Model):
         """ Returns integer last network host-ip """
         return IPy.IP(self.ip)[-2].int()
 
-           
 
 class ManagementInfo(models.Model):
     name = models.CharField(max_length = 255, help_text = _(u'Descriptive name of the management info (I.e. "Procurve switch, basic credentials"'))
